@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <meta name="description" content="Calculator">
+
+    <link rel="icon" type="image/png" href="./favicon.png">
+
+    <!-- Bootstrap 4.5.3 -->
+    <link rel="stylesheet" href="bootstrap.min.css">
+
+    <link rel="stylesheet" type="text/css" href="./main.css">
+
+    <title>Calculator</title>
+
+</head>
+<body>
+<section id="app"></section>
+
+<!-- Bootstrap 4.5.3 -->
+<script src="jquery-3.5.1.slim.min.js"></script>
+<script src="bootstrap.bundle.min.js"></script>
+
+<!-- Calc Webapp -->
+<script src='./calc_seed.js'></script>
+
+<script>
+    // the `wasm_bindgen` global is set to the exports of the Rust module
+    const { render } = wasm_bindgen;
+    // we'll defer our execution until the wasm is ready to go
+    function run() {
+        render();
+    }
+    // here we tell bindgen the path to the wasm file so it can run
+    // initialization and return to us a promise when it's done
+    wasm_bindgen('./calc_seed_bg.wasm')
+        .then(run)
+        .catch(console.error);
+</script>
+
+</body>
+</html>

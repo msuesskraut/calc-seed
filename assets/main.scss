@@ -1,0 +1,44 @@
+$base_color : #202020;
+$fixed_color : darken($base_color, 80%);
+$guess_color : #009900;
+$error_color : red;
+
+$phone: "screen and (max-width: 767px)";
+$tablet: "screen and (min-width: 768px) and (max-width: 1023px)";
+$desktop: "screen and (min-width: 1024px)";
+
+body {
+    background-color: #efefef;
+    color: $base_color;
+}
+
+.command {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    color: $base_color;
+}
+
+.success {
+    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    font-style: italic;
+    color: $base_color;
+}
+
+.failure {
+    font-family: 'Courier New', Courier, monospace;
+    font-style: italic;
+    color: $error_color;
+}
+
+.footer {
+    text-align: center;
+    color: dimgray;
+    font-size: 60%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    a {
+        color: dimgray;
+        :hover {
+            text-underline-position: below;
+        }
+    }
+}
