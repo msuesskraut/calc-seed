@@ -20,21 +20,23 @@ struct Model {
 #[derive(Debug, Clone)]
 pub enum Message {
     CommandUpdate(String),
-    ExecuteCommand
+    ExecuteCommand,
+    ClearCommand,
 }
 
-const ENTER_KEY: u32 = 13;
+const ENTER_KEY: &str = "Enter";
+const ESC_KEY: &str = "Escape";
 
-fn view(model: &Model) -> Vec<Node<Message>> {
+fn view(model: &Model) -> Node<Message> {
     let mut commands: Vec<Node<Message>> = model.cmds.iter().map( |cmd| {
             let res = match &cmd.res {
-                Ok(Some(num)) => div![C!("col success"), num.to_string()],
+                Ok(Some(num)) => div![C!("col-12 success"), num.to_string()],
                 Ok(None) => seed::empty(),
-                Err(err) => div![C!("col failure"), format!("Error: {:?}", err)],
+                Err(err) => div![C!("col-12 failure"), format!("Error: {:?}", err)],
             };
             vec![
                 div![C!("row"),
-                    div![C!("col"), cmd.cmd.clone()],
+                    div![C!("col-12"), cmd.cmd.clone()],
                 ],
                 div![C!("row"), 
                     res
@@ -43,22 +45,39 @@ fn view(model: &Model) -> Vec<Node<Message>> {
         }).flatten().collect();
     commands.push(
         div![C!("row"),
-            div![C!("col"),
+            div![C!("col-12 input-group"),
                 input![
+                    C!("form-control no-outline"),
                     attrs![
                         At::Type => "text",
                         At::Name => "command",
                         At::Placeholder => "command",
                         At::AutoFocus => true.as_at_value(),
+                        "aria-label" => "Command",
+                        "aria-describedby" => "basic-addon2",
                     ],
                     input_ev(Ev::Input, Message::CommandUpdate),
                     keyboard_ev(Ev::KeyDown, |keyboard_event| {
-                        IF!(keyboard_event.key_code() == ENTER_KEY => Message::ExecuteCommand)
+                        Some(match keyboard_event.key().as_str() {
+                                ENTER_KEY => Message::ExecuteCommand,
+                                ESC_KEY => Message::ClearCommand,
+                                _ => return None
+                        })
                     }),
-            ]]
+                ],
+                div![C!("input-group-append"),
+                    button![C!("btn btn-outline-secondary"),
+                        attrs!(At::Type => "button"),
+                        "Execute",
+                        ev(Ev::Click, |_| Message::ExecuteCommand)
+                    ]
+                ]
+            ]
         ]
     );
-    commands
+    div![C!("container"),
+        commands
+    ]
 }
 
 fn update(message: Message, model: &mut Model, _: &mut impl Orders<Message>) {
@@ -66,6 +85,7 @@ fn update(message: Message, model: &mut Model, _: &mut impl Orders<Message>) {
 
     match message {
         Message::CommandUpdate(cmd) => model.current_command = cmd,
+        Message::ClearCommand => model.current_command.clear(),
         Message::ExecuteCommand => {
             let res = model.calc.execute(&model.current_command);
             model.cmds.push(Command { cmd: model.current_command.clone(), res });
