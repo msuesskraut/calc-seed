@@ -4,7 +4,7 @@
 
 Calculator and linear solver as a Single Page Webapp using Seed.
 
-See webapp at: [https://msuesskraut.github.io/calc/](https://msuesskraut.github.io/calc/)
+See webapp at: [https://msuesskraut.github.io/calc/index.html](https://msuesskraut.github.io/calc/index.html)
 
 Based on:
 
