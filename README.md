@@ -1,6 +1,6 @@
-[![Built with cargo-make](https://sagiegurari.github.io/cargo-make/assets/badges/cargo-make.svg)](https://sagiegurari.github.io/cargo-make)
-
 # Calc-webapp-seed
+
+[![Built with cargo-make](https://sagiegurari.github.io/cargo-make/assets/badges/cargo-make.svg)](https://sagiegurari.github.io/cargo-make)
 
 Calculator and linear solver as a Single Page Webapp using Seed.
 
@@ -13,7 +13,7 @@ Based on:
 * [wasm](https://webassembly.org/)
 * [Rust-expression crate](https://crates.io/crates/rust-expression)
 
-# Build & run
+## Build & run
 
 Build and run with cargo-make:
 
