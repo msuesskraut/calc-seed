@@ -1,17 +1,17 @@
 [![Built with cargo-make](https://sagiegurari.github.io/cargo-make/assets/badges/cargo-make.svg)](https://sagiegurari.github.io/cargo-make)
 
-# binoxxo-webapp-seed
+# Calc-webapp-seed
 
-Binoxxo Single Page Webapp using Seed.
+Calculator and linear solver as a Single Page Webapp using Seed.
 
-See webapp at: [https://msuesskraut.github.io/binoxxo/](https://msuesskraut.github.io/binoxxo/)
+See webapp at: [https://msuesskraut.github.io/calc/](https://msuesskraut.github.io/calc/)
 
 Based on:
 
 * [rust](https://www.rust-lang.org/)
 * [seed](https://seed-rs.org/)
 * [wasm](https://webassembly.org/)
-* [Binoxxo crate](https://crates.io/crates/binoxxo)
+* [Rust-expression crate](https://crates.io/crates/rust-expression)
 
 # Build & run
 
