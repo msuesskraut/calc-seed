@@ -2,6 +2,7 @@ $base_color : #202020;
 $fixed_color : darken($base_color, 80%);
 $guess_color : #009900;
 $error_color : red;
+$prompt_color: orange;
 
 $phone: "screen and (max-width: 767px)";
 $tablet: "screen and (min-width: 768px) and (max-width: 1023px)";
@@ -10,6 +11,10 @@ $desktop: "screen and (min-width: 1024px)";
 body {
     background-color: #efefef;
     color: $base_color;
+}
+
+.h1 {
+    text-align: center;
 }
 
 .command {
@@ -28,6 +33,11 @@ body {
     font-family: 'Courier New', Courier, monospace;
     font-style: italic;
     color: $error_color;
+}
+
+.prompt {
+    color: $prompt_color;
+    font-weight: bolder;
 }
 
 .footer {
