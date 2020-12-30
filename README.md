@@ -17,6 +17,6 @@ Based on:
 
 Build and run with cargo-make:
 
-    cargo install cargo make
+    cargo install cargo-make
     cargo make build
     cargo make serve
