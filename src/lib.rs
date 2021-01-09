@@ -1,18 +1,45 @@
-use rust_expression::{Calculator, Error};
+use rust_expression::{Calculator, Error, Value, Number, Plot};
 use seed::prelude::*;
 use seed::*;
 
-type Number = f64;
+use web_sys::HtmlCanvasElement;
 
 #[derive(Debug)]
-struct Command {
+struct PlotElement {
+    plot: Plot,
+    canvas: ElRef<HtmlCanvasElement>,
+}
+
+#[derive(Debug)]
+enum CalcResult {
+    Void,
+    Number(Number),
+    Solved { variable: String, value: Number },
+    Plot(PlotElement),
+    Error(Error)    
+}
+
+impl From<Result<Value, Error>> for CalcResult {
+    fn from(res: Result<Value, Error>) -> CalcResult {
+        match res {
+            Ok(Value::Void) => CalcResult::Void,
+            Ok(Value::Number(num)) => CalcResult::Number(num),
+            Ok(Value::Solved { variable, value}) => CalcResult::Solved { variable, value },
+            Ok(Value::Plot(plot)) => CalcResult::Plot(PlotElement { plot, canvas: ElRef::default() }),
+            Err(err) => CalcResult::Error(err),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct CalcCommand {
     cmd: String,
-    res: Result<Option<Number>, Error>,
+    res: CalcResult,
 }
 
 #[derive(Debug, Default)]
 struct Model {
-    cmds: Vec<Command>,
+    cmds: Vec<CalcCommand>,
     calc: Calculator,
     current_command: String,
     history: usize,
@@ -25,6 +52,7 @@ pub enum Message {
     ClearCommand,
     HistoryUp,
     HistoryDown,
+    RenderPlot,
 }
 
 const ENTER_KEY: &str = "Enter";
@@ -71,13 +99,24 @@ fn view(model: &Model) -> Node<Message> {
         .iter()
         .map(|cmd| {
             let res = match &cmd.res {
-                Ok(Some(num)) => div![C!("col-12 success"), "=> ", num.to_string()],
-                Ok(None) => seed::empty(),
-                Err(err) => div![C!("col-12 failure"), pre![format!("Error: {:}", err)]],
+                CalcResult::Void => seed::empty(),
+                CalcResult::Number(num) => div![C!("success"), "=> ", num.to_string()],
+                CalcResult::Solved { variable, value} => div![C!("success"), "=> ", variable, " = ", value.to_string()],
+                CalcResult::Plot(plot) => canvas![
+                    el_ref(&plot.canvas),
+                    attrs![
+                        At::Width => px(400),
+                        At::Height => px(300),
+                    ],
+                    style![
+                        St::Border => "1px solid black",
+                    ],
+                ],
+                CalcResult::Error(err) => div![C!("failure"), format!("{:?}", err)],
             };
             vec![
                 div![C!("row"), div![C!("col-12"), span![C!("prompt"), "> "], cmd.cmd.to_string()],],
-                div![C!("row"), res],
+                div![C!("row"), div![C!("col-12"), res]],
             ]
         })
         .flatten()
@@ -122,23 +161,36 @@ fn view(model: &Model) -> Node<Message> {
 
     div![
         C!("container"),
-        div![C!("col-12"), h1!("Calculator")],
+        div![C!("row"),
+            div![C!("col-12"), h1!("Calculator")],
+        ],
         commands,
         view_footer()
     ]
 }
 
-fn update(message: Message, model: &mut Model, _: &mut impl Orders<Message>) {
-    seed::log!(format!("Got {:?}", message));
+fn draw(plot: &PlotElement) {
+    let canvas = plot.canvas.get().expect("get canvas element");
+    let ctx = seed::canvas_context_2d(&canvas);
 
+    ctx.rect(0., 0., 200., 100.);
+    ctx.set_fill_style(&JsValue::from_str("blue"));
+    ctx.fill();
+
+    ctx.move_to(0., 0.);
+    ctx.line_to(200., 100.);
+    ctx.stroke();
+}
+
+fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>) {
     match message {
         Message::CommandUpdate(cmd) => model.current_command = cmd,
         Message::ClearCommand => model.current_command.clear(),
         Message::ExecuteCommand => {
             let res = model.calc.execute(&model.current_command);
-            model.cmds.push(Command {
+            model.cmds.push(CalcCommand {
                 cmd: model.current_command.clone(),
-                res,
+                res: res.into(),
             });
             model.history = model.cmds.len();
             model.current_command.clear();
@@ -165,10 +217,20 @@ fn update(message: Message, model: &mut Model, _: &mut impl Orders<Message>) {
                 model.current_command = model.cmds[model.history].cmd.clone();
             }
         },
+        Message::RenderPlot => {
+            for cmd in &model.cmds {
+                match cmd.res {
+                    CalcResult::Plot(ref plot) => draw(plot),
+                    _ => {}
+                }
+            }
+            orders.after_next_render(|_| Message::RenderPlot).skip();
+        }
     }
 }
 
-fn init(_url: Url, _orders: &mut impl Orders<Message>) -> Model {
+fn init(_url: Url, orders: &mut impl Orders<Message>) -> Model {
+    orders.after_next_render(|_| Message::RenderPlot);
     Model::default()
 }
 
