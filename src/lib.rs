@@ -1,4 +1,4 @@
-use rust_expression::{Calculator, Error, Value, Number, Plot};
+use rust_expression::{Calculator, Error, Number, Plot, Value};
 use seed::prelude::*;
 use seed::*;
 
@@ -16,7 +16,7 @@ enum CalcResult {
     Number(Number),
     Solved { variable: String, value: Number },
     Plot(PlotElement),
-    Error(Error)    
+    Error(Error),
 }
 
 impl From<Result<Value, Error>> for CalcResult {
@@ -24,8 +24,11 @@ impl From<Result<Value, Error>> for CalcResult {
         match res {
             Ok(Value::Void) => CalcResult::Void,
             Ok(Value::Number(num)) => CalcResult::Number(num),
-            Ok(Value::Solved { variable, value}) => CalcResult::Solved { variable, value },
-            Ok(Value::Plot(plot)) => CalcResult::Plot(PlotElement { plot, canvas: ElRef::default() }),
+            Ok(Value::Solved { variable, value }) => CalcResult::Solved { variable, value },
+            Ok(Value::Plot(plot)) => CalcResult::Plot(PlotElement {
+                plot,
+                canvas: ElRef::default(),
+            }),
             Err(err) => CalcResult::Error(err),
         }
     }
@@ -101,7 +104,9 @@ fn view(model: &Model) -> Node<Message> {
             let res = match &cmd.res {
                 CalcResult::Void => seed::empty(),
                 CalcResult::Number(num) => div![C!("success"), "=> ", num.to_string()],
-                CalcResult::Solved { variable, value} => div![C!("success"), "=> ", variable, " = ", value.to_string()],
+                CalcResult::Solved { variable, value } => {
+                    div![C!("success"), "=> ", variable, " = ", value.to_string()]
+                }
                 CalcResult::Plot(plot) => canvas![
                     el_ref(&plot.canvas),
                     attrs![
@@ -115,7 +120,10 @@ fn view(model: &Model) -> Node<Message> {
                 CalcResult::Error(err) => div![C!("failure"), format!("{:?}", err)],
             };
             vec![
-                div![C!("row"), div![C!("col-12"), span![C!("prompt"), "> "], cmd.cmd.to_string()],],
+                div![
+                    C!("row"),
+                    div![C!("col-12"), span![C!("prompt"), "> "], cmd.cmd.to_string()],
+                ],
                 div![C!("row"), div![C!("col-12"), res]],
             ]
         })
@@ -161,9 +169,7 @@ fn view(model: &Model) -> Node<Message> {
 
     div![
         C!("container"),
-        div![C!("row"),
-            div![C!("col-12"), h1!("Calculator")],
-        ],
+        div![C!("row"), div![C!("col-12"), h1!("Calculator")],],
         commands,
         view_footer()
     ]
@@ -194,8 +200,8 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
             });
             model.history = model.cmds.len();
             model.current_command.clear();
-        },
-        Message::HistoryDown => { 
+        }
+        Message::HistoryDown => {
             let mut history_entry = model.history;
             if history_entry < model.cmds.len() {
                 history_entry += 1;
@@ -206,7 +212,7 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
             } else {
                 model.current_command.clear();
             }
-        },
+        }
         Message::HistoryUp => {
             let mut history_entry = model.history;
             if history_entry > 0 {
@@ -216,7 +222,7 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
             if model.history < model.cmds.len() {
                 model.current_command = model.cmds[model.history].cmd.clone();
             }
-        },
+        }
         Message::RenderPlot => {
             for cmd in &model.cmds {
                 match cmd.res {
