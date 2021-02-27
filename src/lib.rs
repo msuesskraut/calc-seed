@@ -1,4 +1,4 @@
-use rust_expression::{Calculator, Error, Number, Plot, Value};
+use rust_expression::{Calculator, Error, Number, Graph, Value, Area};
 use seed::prelude::*;
 use seed::*;
 
@@ -6,8 +6,10 @@ use web_sys::HtmlCanvasElement;
 
 #[derive(Debug)]
 struct PlotElement {
-    plot: Plot,
+    graph: Graph,
     canvas: ElRef<HtmlCanvasElement>,
+    screen: Area,
+    area: Area,
 }
 
 #[derive(Debug)]
@@ -25,9 +27,11 @@ impl From<Result<Value, Error>> for CalcResult {
             Ok(Value::Void) => CalcResult::Void,
             Ok(Value::Number(num)) => CalcResult::Number(num),
             Ok(Value::Solved { variable, value }) => CalcResult::Solved { variable, value },
-            Ok(Value::Plot(plot)) => CalcResult::Plot(PlotElement {
-                plot,
+            Ok(Value::Graph(graph)) => CalcResult::Plot(PlotElement {
+                graph,
                 canvas: ElRef::default(),
+                screen: Area::new(0., 0., 400., 300.),
+                area: Area::new(-100., -100., 100., 100.),
             }),
             Err(err) => CalcResult::Error(err),
         }
@@ -55,7 +59,8 @@ pub enum Message {
     ClearCommand,
     HistoryUp,
     HistoryDown,
-    RenderPlot,
+    RenderPlot(usize),
+    DragPlot(usize, f64, f64),
 }
 
 const ENTER_KEY: &str = "Enter";
@@ -100,23 +105,34 @@ fn view(model: &Model) -> Node<Message> {
     let mut commands: Vec<Node<Message>> = model
         .cmds
         .iter()
-        .map(|cmd| {
+        .enumerate()
+        .map(|(idx, cmd)| {
             let res = match &cmd.res {
                 CalcResult::Void => seed::empty(),
                 CalcResult::Number(num) => div![C!("success"), "=> ", num.to_string()],
                 CalcResult::Solved { variable, value } => {
                     div![C!("success"), "=> ", variable, " = ", value.to_string()]
                 }
-                CalcResult::Plot(plot) => canvas![
-                    el_ref(&plot.canvas),
-                    attrs![
-                        At::Width => px(400),
-                        At::Height => px(300),
-                    ],
-                    style![
-                        St::Border => "1px solid black",
-                    ],
-                ],
+                CalcResult::Plot(plot) => {
+                    let width = plot.screen.x.get_distance();
+                    let height = plot.screen.y.get_distance();
+                    canvas![
+                        el_ref(&plot.canvas),
+                        attrs![
+                            At::Width => px(width),
+                            At::Height => px(height),
+                        ],
+                        style![
+                            St::Border => "1px solid black",
+                        ],
+                        mouse_ev(Ev::MouseMove, move |e| { if e.buttons() == 1 {
+                                Some(Message::DragPlot(idx, e.movement_x().into(), e.movement_y().into()))
+                            } else {
+                                None
+                            }
+                        }),
+                    ]
+                }
                 CalcResult::Error(err) => div![C!("failure"), format!("{:?}", err)],
             };
             vec![
@@ -175,17 +191,63 @@ fn view(model: &Model) -> Node<Message> {
     ]
 }
 
-fn draw(plot: &PlotElement) {
-    let canvas = plot.canvas.get().expect("get canvas element");
+fn draw(plot_element: &PlotElement) {
+    let canvas = plot_element.canvas.get().expect("get canvas element");
     let ctx = seed::canvas_context_2d(&canvas);
 
-    ctx.rect(0., 0., 200., 100.);
-    ctx.set_fill_style(&JsValue::from_str("blue"));
-    ctx.fill();
+    seed::log!(format!("draw"));
+    // Store the current transformation matrix
+    //ctx.save();
 
-    ctx.move_to(0., 0.);
-    ctx.line_to(200., 100.);
-    ctx.stroke();
+    // Use the identity matrix while clearing the canvas
+    //ctx.set_transform(1., 0., 0., 1., 0., 0.).expect("transformation successful");
+    ctx.clear_rect(0.0, 0.0, canvas.width().into(), canvas.height().into());
+    ctx.begin_path();
+
+    // Restore the transform
+    //ctx.restore();
+
+    let plot = plot_element.graph.plot(&plot_element.area, &plot_element.screen).unwrap();
+
+    if let Some(y) = plot.x_axis {
+        let y = plot.screen.y.max - y;
+        ctx.move_to(plot_element.screen.x.min, y);
+        ctx.line_to(plot_element.screen.x.max, y);
+        ctx.stroke();
+    }
+
+    if let Some(x) = plot.y_axis {
+        ctx.move_to(x, plot_element.screen.y.min);
+        ctx.line_to(x, plot_element.screen.y.max);
+        ctx.stroke();
+    }
+
+    let points = plot.points;
+    let mut close_stroke = false;
+
+    for x in (plot.screen.x.min as usize)..(plot.screen.x.max as usize) {
+        let y = points[x];
+        match y {
+            Some(y) => {
+                let y = plot.screen.y.max - y;
+                if close_stroke {
+                    ctx.line_to(x as f64, y);
+                } else {
+                    ctx.move_to(x as f64, y);
+                }
+                close_stroke = true;
+            }
+            None => {
+                if close_stroke {
+                    ctx.stroke();
+                    close_stroke = false;
+                }
+            }
+        }
+    }
+    if close_stroke {
+        ctx.stroke();
+    }
 }
 
 fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>) {
@@ -193,13 +255,19 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
         Message::CommandUpdate(cmd) => model.current_command = cmd,
         Message::ClearCommand => model.current_command.clear(),
         Message::ExecuteCommand => {
-            let res = model.calc.execute(&model.current_command);
-            model.cmds.push(CalcCommand {
-                cmd: model.current_command.clone(),
-                res: res.into(),
-            });
-            model.history = model.cmds.len();
-            model.current_command.clear();
+            if !model.current_command.is_empty() {
+                let res = model.calc.execute(&model.current_command);
+                if matches!(&res, Ok(Value::Graph(_))) {
+                    let next_idx = model.cmds.len();
+                    orders.after_next_render(move |_| Message::RenderPlot(next_idx)); //.skip();
+                }
+                model.cmds.push(CalcCommand {
+                    cmd: model.current_command.clone(),
+                    res: res.into(),
+                });
+                model.history = model.cmds.len();
+                model.current_command.clear();
+            }
         }
         Message::HistoryDown => {
             let mut history_entry = model.history;
@@ -223,20 +291,28 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
                 model.current_command = model.cmds[model.history].cmd.clone();
             }
         }
-        Message::RenderPlot => {
-            for cmd in &model.cmds {
-                match cmd.res {
-                    CalcResult::Plot(ref plot) => draw(plot),
-                    _ => {}
+        Message::RenderPlot(idx) => {
+            seed::log!(format!("renderPlot({})", idx));
+            if let Some(cmd) = model.cmds.get(idx) {
+                if let CalcResult::Plot(ref plot) = cmd.res {
+                    draw(plot);
                 }
             }
-            orders.after_next_render(|_| Message::RenderPlot).skip();
+            //orders.after_next_render(|_| Message::RenderPlot).skip();
+        }
+        Message::DragPlot(index, x, y) => {
+            seed::log!(format!("Move plot {} by ({}, {})", index, x, y));
+            if let Some(cmd) = model.cmds.get_mut(index) {
+                if let CalcResult::Plot(ref mut plot_element) = cmd.res {
+                    plot_element.area.move_by(-x, y);
+                    orders.after_next_render(move |_| Message::RenderPlot(index)); //.skip();
+                }
+            }
         }
     }
 }
 
-fn init(_url: Url, orders: &mut impl Orders<Message>) -> Model {
-    orders.after_next_render(|_| Message::RenderPlot);
+fn init(_url: Url, _orders: &mut impl Orders<Message>) -> Model {
     Model::default()
 }
 
