@@ -1,4 +1,4 @@
-use rust_expression::{Calculator, Error, Number, Graph, Value, Area};
+use rust_expression::{Area, Calculator, Error, Graph, Number, Value};
 use seed::prelude::*;
 use seed::*;
 
@@ -125,8 +125,13 @@ fn view(model: &Model) -> Node<Message> {
                         style![
                             St::Border => "1px solid black",
                         ],
-                        mouse_ev(Ev::MouseMove, move |e| { if e.buttons() == 1 {
-                                Some(Message::DragPlot(idx, e.movement_x().into(), e.movement_y().into()))
+                        mouse_ev(Ev::MouseMove, move |e| {
+                            if e.buttons() == 1 {
+                                Some(Message::DragPlot(
+                                    idx,
+                                    e.movement_x().into(),
+                                    e.movement_y().into(),
+                                ))
                             } else {
                                 None
                             }
@@ -207,7 +212,10 @@ fn draw(plot_element: &PlotElement) {
     // Restore the transform
     //ctx.restore();
 
-    let plot = plot_element.graph.plot(&plot_element.area, &plot_element.screen).unwrap();
+    let plot = plot_element
+        .graph
+        .plot(&plot_element.area, &plot_element.screen)
+        .unwrap();
 
     if let Some(y) = plot.x_axis {
         let y = plot.screen.y.max - y;
@@ -259,7 +267,8 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
                 let res = model.calc.execute(&model.current_command);
                 if matches!(&res, Ok(Value::Graph(_))) {
                     let next_idx = model.cmds.len();
-                    orders.after_next_render(move |_| Message::RenderPlot(next_idx)); //.skip();
+                    orders.after_next_render(move |_| Message::RenderPlot(next_idx));
+                    //.skip();
                 }
                 model.cmds.push(CalcCommand {
                     cmd: model.current_command.clone(),
@@ -305,7 +314,8 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
             if let Some(cmd) = model.cmds.get_mut(index) {
                 if let CalcResult::Plot(ref mut plot_element) = cmd.res {
                     plot_element.area.move_by(-x, y);
-                    orders.after_next_render(move |_| Message::RenderPlot(index)); //.skip();
+                    orders.after_next_render(move |_| Message::RenderPlot(index));
+                    //.skip();
                 }
             }
         }
