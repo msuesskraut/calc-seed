@@ -200,17 +200,8 @@ fn draw(plot_element: &PlotElement) {
     let canvas = plot_element.canvas.get().expect("get canvas element");
     let ctx = seed::canvas_context_2d(&canvas);
 
-    seed::log!(format!("draw"));
-    // Store the current transformation matrix
-    //ctx.save();
-
-    // Use the identity matrix while clearing the canvas
-    //ctx.set_transform(1., 0., 0., 1., 0., 0.).expect("transformation successful");
     ctx.clear_rect(0.0, 0.0, canvas.width().into(), canvas.height().into());
     ctx.begin_path();
-
-    // Restore the transform
-    //ctx.restore();
 
     let plot = plot_element
         .graph
@@ -268,7 +259,6 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
                 if matches!(&res, Ok(Value::Graph(_))) {
                     let next_idx = model.cmds.len();
                     orders.after_next_render(move |_| Message::RenderPlot(next_idx));
-                    //.skip();
                 }
                 model.cmds.push(CalcCommand {
                     cmd: model.current_command.clone(),
@@ -307,7 +297,6 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
                     draw(plot);
                 }
             }
-            //orders.after_next_render(|_| Message::RenderPlot).skip();
         }
         Message::DragPlot(index, x, y) => {
             seed::log!(format!("Move plot {} by ({}, {})", index, x, y));
@@ -315,7 +304,6 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
                 if let CalcResult::Plot(ref mut plot_element) = cmd.res {
                     plot_element.area.move_by(-x, y);
                     orders.after_next_render(move |_| Message::RenderPlot(index));
-                    //.skip();
                 }
             }
         }
