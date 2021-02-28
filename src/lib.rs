@@ -223,7 +223,8 @@ fn draw(plot_element: &PlotElement) {
         for tic in x_axis.tics {
             ctx.move_to(tic.pos, y);
             ctx.line_to(tic.pos, y - 5.);
-            ctx.fill_text(&format!("{}", tic.label), tic.pos, y - 15.).expect("drawing x axis label failed"); 
+            ctx.fill_text(&format!("{}", tic.label), tic.pos, y - 15.)
+                .expect("drawing x axis label failed");
         }
     }
 
@@ -238,7 +239,8 @@ fn draw(plot_element: &PlotElement) {
             let pos = plot.screen.y.max - tic.pos;
             ctx.move_to(x, pos);
             ctx.line_to(x + 5., pos);
-            ctx.fill_text(&format!("{}", tic.label), x + 7., pos).expect("drawing y axis label failed"); 
+            ctx.fill_text(&format!("{}", tic.label), x + 7., pos)
+                .expect("drawing y axis label failed");
         }
     }
     ctx.stroke();
