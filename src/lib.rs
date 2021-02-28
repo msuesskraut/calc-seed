@@ -17,7 +17,7 @@ enum CalcResult {
     Void,
     Number(Number),
     Solved { variable: String, value: Number },
-    Plot(PlotElement),
+    Plot(Box<PlotElement>),
     Error(Error),
 }
 
@@ -27,12 +27,12 @@ impl From<Result<Value, Error>> for CalcResult {
             Ok(Value::Void) => CalcResult::Void,
             Ok(Value::Number(num)) => CalcResult::Number(num),
             Ok(Value::Solved { variable, value }) => CalcResult::Solved { variable, value },
-            Ok(Value::Graph(graph)) => CalcResult::Plot(PlotElement {
+            Ok(Value::Graph(graph)) => CalcResult::Plot(Box::new(PlotElement {
                 graph,
                 canvas: ElRef::default(),
                 screen: Area::new(0., 0., 400., 300.),
                 area: Area::new(-100., -100., 100., 100.),
-            }),
+            })),
             Err(err) => CalcResult::Error(err),
         }
     }
@@ -224,8 +224,7 @@ fn draw(plot_element: &PlotElement) {
     let points = plot.points;
     let mut close_stroke = false;
 
-    for x in (plot.screen.x.min as usize)..(plot.screen.x.max as usize) {
-        let y = points[x];
+    for (x, y) in points.iter().enumerate() {
         match y {
             Some(y) => {
                 let y = plot.screen.y.max - y;
