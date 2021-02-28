@@ -200,26 +200,52 @@ fn draw(plot_element: &PlotElement) {
     let canvas = plot_element.canvas.get().expect("get canvas element");
     let ctx = seed::canvas_context_2d(&canvas);
 
-    ctx.clear_rect(0.0, 0.0, canvas.width().into(), canvas.height().into());
-    ctx.begin_path();
-
     let plot = plot_element
         .graph
         .plot(&plot_element.area, &plot_element.screen)
         .unwrap();
 
-    if let Some(y) = plot.x_axis {
-        let y = plot.screen.y.max - y;
+    ctx.clear_rect(0.0, 0.0, canvas.width().into(), canvas.height().into());
+    let gray: JsValue = "#aaaaaa".into();
+    ctx.begin_path();
+    ctx.set_line_width(0.5);
+    ctx.set_stroke_style(&gray);
+    ctx.set_font("8px Arial");
+    ctx.set_fill_style(&gray);
+
+    if let Some(x_axis) = plot.x_axis {
+        ctx.set_text_align("center");
+        ctx.set_text_baseline("bottom");
+        let y = plot.screen.y.max - x_axis.pos;
         ctx.move_to(plot_element.screen.x.min, y);
         ctx.line_to(plot_element.screen.x.max, y);
-        ctx.stroke();
+
+        for tic in x_axis.tics {
+            ctx.move_to(tic.pos, y);
+            ctx.line_to(tic.pos, y - 5.);
+            ctx.fill_text(&format!("{}", tic.label), tic.pos, y - 15.).expect("drawing x axis label failed"); 
+        }
     }
 
-    if let Some(x) = plot.y_axis {
+    if let Some(y_axis) = plot.y_axis {
+        ctx.set_text_align("left");
+        ctx.set_text_baseline("middle");
+        let x = y_axis.pos;
         ctx.move_to(x, plot_element.screen.y.min);
         ctx.line_to(x, plot_element.screen.y.max);
-        ctx.stroke();
+
+        for tic in y_axis.tics {
+            let pos = plot.screen.y.max - tic.pos;
+            ctx.move_to(x, pos);
+            ctx.line_to(x + 5., pos);
+            ctx.fill_text(&format!("{}", tic.label), x + 7., pos).expect("drawing y axis label failed"); 
+        }
     }
+    ctx.stroke();
+
+    ctx.begin_path();
+    ctx.set_line_width(1.5);
+    ctx.set_stroke_style(&"blue".into());
 
     let points = plot.points;
     let mut close_stroke = false;
