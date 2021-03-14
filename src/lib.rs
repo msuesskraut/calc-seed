@@ -164,6 +164,7 @@ fn view(model: &Model) -> Node<Message> {
                     At::Value => model.current_command,
                     "aria-label" => "Command",
                     "aria-describedby" => "basic-addon2",
+                    "autocapitalize" => "off",  
                 ],
                 input_ev(Ev::Input, Message::CommandUpdate),
                 keyboard_ev(Ev::KeyDown, |keyboard_event| {
