@@ -41,8 +41,8 @@ impl PlotElement {
                 } else {
                     false
                 }
-            },
-            _ => false
+            }
+            _ => false,
         }
     }
 
@@ -87,10 +87,7 @@ impl PlotElement {
         let canvas = self.canvas.get().expect("get canvas element");
         let ctx = seed::canvas_context_2d(&canvas);
 
-        let plot = self
-            .graph
-            .plot(&self.area, &self.screen)
-            .unwrap();
+        let plot = self.graph.plot(&self.area, &self.screen).unwrap();
 
         ctx.clear_rect(0.0, 0.0, canvas.width().into(), canvas.height().into());
         let gray: JsValue = "#aaaaaa".into();
