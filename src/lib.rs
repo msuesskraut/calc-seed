@@ -1,15 +1,26 @@
-use rust_expression::{Area, Calculator, Error, Graph, Number, Value};
+mod plot;
+
+use rust_expression::{Calculator, Error, Number, Value};
 use seed::prelude::*;
 use seed::*;
 
-use web_sys::HtmlCanvasElement;
+use web_sys::{MouseEvent, TouchEvent};
 
-#[derive(Debug)]
-struct PlotElement {
-    graph: Graph,
-    canvas: ElRef<HtmlCanvasElement>,
-    screen: Area,
-    area: Area,
+use plot::PlotElement;
+
+#[derive(Debug, Clone)]
+pub enum MouseMessage {
+    MouseDown(MouseEvent),
+    MouseUp(MouseEvent),
+    MouseMove(MouseEvent),
+}
+
+#[derive(Debug, Clone)]
+pub enum TouchMessage {
+    TouchStart(TouchEvent),
+    TouchEnd(TouchEvent),
+    TouchCancel(TouchEvent),
+    TouchMove(TouchEvent),
 }
 
 #[derive(Debug)]
@@ -27,12 +38,7 @@ impl From<Result<Value, Error>> for CalcResult {
             Ok(Value::Void) => CalcResult::Void,
             Ok(Value::Number(num)) => CalcResult::Number(num),
             Ok(Value::Solved { variable, value }) => CalcResult::Solved { variable, value },
-            Ok(Value::Graph(graph)) => CalcResult::Plot(Box::new(PlotElement {
-                graph,
-                canvas: ElRef::default(),
-                screen: Area::new(0., 0., 400., 300.),
-                area: Area::new(-100., -100., 100., 100.),
-            })),
+            Ok(Value::Graph(graph)) => CalcResult::Plot(Box::new(PlotElement::new(graph))),
             Err(err) => CalcResult::Error(err),
         }
     }
@@ -60,7 +66,8 @@ pub enum Message {
     HistoryUp,
     HistoryDown,
     RenderPlot(usize),
-    DragPlot(usize, f64, f64),
+    MouseMessage(usize, MouseMessage),
+    TouchMessage(usize, TouchMessage),
 }
 
 const ENTER_KEY: &str = "Enter";
@@ -113,31 +120,7 @@ fn view(model: &Model) -> Node<Message> {
                 CalcResult::Solved { variable, value } => {
                     div![C!("success"), "=> ", variable, " = ", value.to_string()]
                 }
-                CalcResult::Plot(plot) => {
-                    let width = plot.screen.x.get_distance();
-                    let height = plot.screen.y.get_distance();
-                    canvas![
-                        el_ref(&plot.canvas),
-                        attrs![
-                            At::Width => px(width),
-                            At::Height => px(height),
-                        ],
-                        style![
-                            St::Border => "1px solid black",
-                        ],
-                        mouse_ev(Ev::MouseMove, move |e| {
-                            if e.buttons() == 1 {
-                                Some(Message::DragPlot(
-                                    idx,
-                                    e.movement_x().into(),
-                                    e.movement_y().into(),
-                                ))
-                            } else {
-                                None
-                            }
-                        }),
-                    ]
-                }
+                CalcResult::Plot(plot) => plot.view(idx),
                 CalcResult::Error(err) => div![C!("failure"), format!("{:?}", err)],
             };
             vec![
@@ -197,85 +180,6 @@ fn view(model: &Model) -> Node<Message> {
     ]
 }
 
-fn draw(plot_element: &PlotElement) {
-    let canvas = plot_element.canvas.get().expect("get canvas element");
-    let ctx = seed::canvas_context_2d(&canvas);
-
-    let plot = plot_element
-        .graph
-        .plot(&plot_element.area, &plot_element.screen)
-        .unwrap();
-
-    ctx.clear_rect(0.0, 0.0, canvas.width().into(), canvas.height().into());
-    let gray: JsValue = "#aaaaaa".into();
-    ctx.begin_path();
-    ctx.set_line_width(0.5);
-    ctx.set_stroke_style(&gray);
-    ctx.set_font("8px Arial");
-    ctx.set_fill_style(&gray);
-
-    if let Some(x_axis) = plot.x_axis {
-        ctx.set_text_align("center");
-        ctx.set_text_baseline("bottom");
-        let y = plot.screen.y.max - x_axis.pos;
-        ctx.move_to(plot_element.screen.x.min, y);
-        ctx.line_to(plot_element.screen.x.max, y);
-
-        for tic in x_axis.tics {
-            ctx.move_to(tic.pos, y);
-            ctx.line_to(tic.pos, y - 5.);
-            ctx.fill_text(&format!("{}", tic.label), tic.pos, y - 15.)
-                .expect("drawing x axis label failed");
-        }
-    }
-
-    if let Some(y_axis) = plot.y_axis {
-        ctx.set_text_align("left");
-        ctx.set_text_baseline("middle");
-        let x = y_axis.pos;
-        ctx.move_to(x, plot_element.screen.y.min);
-        ctx.line_to(x, plot_element.screen.y.max);
-
-        for tic in y_axis.tics {
-            let pos = plot.screen.y.max - tic.pos;
-            ctx.move_to(x, pos);
-            ctx.line_to(x + 5., pos);
-            ctx.fill_text(&format!("{}", tic.label), x + 7., pos)
-                .expect("drawing y axis label failed");
-        }
-    }
-    ctx.stroke();
-
-    ctx.begin_path();
-    ctx.set_line_width(1.5);
-    ctx.set_stroke_style(&"blue".into());
-
-    let points = plot.points;
-    let mut close_stroke = false;
-
-    for (x, y) in points.iter().enumerate() {
-        match y {
-            Some(y) => {
-                let y = plot.screen.y.max - y;
-                if close_stroke {
-                    ctx.line_to(x as f64, y);
-                } else {
-                    ctx.move_to(x as f64, y);
-                }
-                close_stroke = true;
-            }
-            None => {
-                if close_stroke {
-                    ctx.stroke();
-                    close_stroke = false;
-                }
-            }
-        }
-    }
-    if close_stroke {
-        ctx.stroke();
-    }
-}
 
 fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>) {
     match message {
@@ -322,16 +226,27 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
             seed::log!(format!("renderPlot({})", idx));
             if let Some(cmd) = model.cmds.get(idx) {
                 if let CalcResult::Plot(ref plot) = cmd.res {
-                    draw(plot);
+                    plot.draw();
                 }
             }
         }
-        Message::DragPlot(index, x, y) => {
-            seed::log!(format!("Move plot {} by ({}, {})", index, x, y));
-            if let Some(cmd) = model.cmds.get_mut(index) {
+        Message::MouseMessage(idx, m) => {
+            if let Some(cmd) = model.cmds.get_mut(idx) {
                 if let CalcResult::Plot(ref mut plot_element) = cmd.res {
-                    plot_element.area.move_by(-x, y);
-                    orders.after_next_render(move |_| Message::RenderPlot(index));
+                    let must_render = plot_element.process_mouse(m);
+                    if must_render {
+                        orders.after_next_render(move |_| Message::RenderPlot(idx));
+                    }
+                }
+            }
+        }
+        Message::TouchMessage(idx, m) => {
+            if let Some(cmd) = model.cmds.get_mut(idx) {
+                if let CalcResult::Plot(ref mut plot_element) = cmd.res {
+                    let must_render = plot_element.process_touch(m);
+                    if must_render {
+                        orders.after_next_render(move |_| Message::RenderPlot(idx));
+                    }
                 }
             }
         }
