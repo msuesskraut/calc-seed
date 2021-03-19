@@ -18,10 +18,10 @@ crate-type = ["cdylib", "rlib"]
 
 rust-expression = { path = "./../rust-expression" }
 seed = "0.8.0"
-wasm-bindgen = "0.2.70"
+wasm-bindgen = "0.2.72"
 
 [dependencies.web-sys]
-version = "^0.3.47"
+version = "^0.3.49"
 features = [
     "Blob",
     "Event",
@@ -33,4 +33,4 @@ features = [
 ]
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.20"
+wasm-bindgen-test = "0.3.22"
