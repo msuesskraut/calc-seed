@@ -1,7 +1,6 @@
 use std::rc::Rc;
 
 use seed::prelude::*;
-use seed::*;
 
 macro_rules! map_callback_return_to_option_ms {
     ($cb_type:ty, $callback:expr, $panic_text:literal, $output_type:tt) => {{
