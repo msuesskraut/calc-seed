@@ -1,10 +1,115 @@
+use std::rc::Rc;
+
 use rust_expression::{Area, Graph, Number};
 use seed::prelude::*;
 use seed::*;
 
-use web_sys::HtmlCanvasElement;
+use web_sys::{HtmlCanvasElement, TouchList, MouseEvent, Touch, TouchEvent, WheelEvent};
 
-use crate::{Message, MouseMessage, TouchMessage};
+use crate::Message;
+
+#[derive(Debug, Clone)]
+pub enum MouseMessage {
+    MouseDown(MouseEvent),
+    MouseUp(MouseEvent),
+    MouseMove(MouseEvent),
+    Wheel(WheelEvent),
+}
+
+#[derive(Debug, Clone)]
+pub enum TouchMessage {
+    TouchStart(TouchEvent),
+    TouchEnd(TouchEvent),
+    TouchCancel(TouchEvent),
+    TouchMove(TouchEvent),
+}
+
+#[derive(Debug)]
+struct TouchPoint {
+    id: i32,
+    x: i32,
+    y: i32,
+}
+
+impl TouchPoint {
+    fn new(touch: &Touch) -> TouchPoint {
+        let id = touch.identifier();
+        let x = touch.client_x();
+        let y = touch.client_y();
+        TouchPoint { id, x, y }
+    }
+}
+
+#[derive(Debug)]
+enum TouchState {
+    None,
+    Move(TouchPoint),
+    Zoom(TouchPoint, TouchPoint),
+}
+
+impl TouchState {
+    fn new(tl: TouchList) -> TouchState {
+        match tl.length() {
+            1 => TouchState::Move(TouchPoint::new(&tl.item(0).unwrap())),
+            2 => {
+                let p1 = TouchPoint::new(&tl.item(0).unwrap());
+                let p2 = TouchPoint::new(&tl.item(1).unwrap());
+                if p1.id < p2.id {
+                    TouchState::Zoom(p1, p2)
+                } else {
+                    TouchState::Zoom(p2, p1)
+                }
+            },
+            _ => TouchState::None
+        }
+    }
+
+    fn get_distance(&self) -> Option<Number> {
+        match self {
+            TouchState::Zoom(tp1, tp2) => {
+                let x: Number = (tp1.x - tp2.x).into();
+                let y: Number = (tp1.y - tp2.y).into();
+                Some((x.powi(2) + y.powi(2)).sqrt())
+            },
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug)]
+enum TouchEffect {
+    None,
+    Move(Number, Number),
+    Zoom(Number)
+}
+
+impl TouchEffect {
+    fn new(previous: &TouchState, current: &TouchState) -> TouchEffect {
+        match previous {
+            TouchState::Move(tp_previous) => {
+                match current {
+                    TouchState::Move(tp_current) if tp_previous.id == tp_current.id => {
+                        let x= tp_previous.x - tp_current.x;
+                        let y= tp_previous.y - tp_current.y;
+                        TouchEffect::Move(x.into(), y.into())
+                    },
+                    _ => TouchEffect::None
+                }
+            },
+            TouchState::Zoom(tp1_previous, tp2_previous) => {
+                match current {
+                    TouchState::Zoom(tp1_current, tp2_current) if (tp1_previous.id == tp1_current.id) && (tp2_previous.id == tp2_current.id) => {
+                        let prev_dist = previous.get_distance().unwrap();
+                        let curr_dist = current.get_distance().unwrap();
+                        TouchEffect::Zoom(prev_dist / curr_dist)
+                    },
+                    _ => TouchEffect::None
+                }
+            },
+            TouchState::None => TouchEffect::None,
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct PlotElement {
@@ -12,7 +117,54 @@ pub struct PlotElement {
     canvas: ElRef<HtmlCanvasElement>,
     screen: Area,
     area: Area,
+    touch_state: TouchState,
 }
+
+macro_rules! map_callback_return_to_option_ms {
+    ($cb_type:ty, $callback:expr, $panic_text:literal, $output_type:tt) => {{
+        let t_type = std::any::TypeId::of::<MsU>();
+        if t_type == std::any::TypeId::of::<Ms>() {
+            $output_type::new(move |value| {
+                (&mut Some($callback(value)) as &mut dyn std::any::Any)
+                    .downcast_mut::<Option<Ms>>()
+                    .and_then(Option::take)
+            })
+        } else if t_type == std::any::TypeId::of::<Option<Ms>>() {
+            $output_type::new(move |value| {
+                (&mut $callback(value) as &mut dyn std::any::Any)
+                    .downcast_mut::<Option<Ms>>()
+                    .and_then(Option::take)
+            })
+        } else if t_type == std::any::TypeId::of::<()>() {
+            $output_type::new(move |value| {
+                $callback(value);
+                None
+            }) as $output_type<$cb_type>
+        } else {
+            panic!($panic_text);
+        }
+    }};
+}
+
+#[allow(clippy::shadow_unrelated)]
+pub fn wheel_ev<Ms: 'static, MsU: 'static>(
+    trigger: impl Into<Ev>,
+    handler: impl FnOnce(web_sys::WheelEvent) -> MsU + 'static + Clone,
+) -> EventHandler<Ms> {
+    let handler = map_callback_return_to_option_ms!(
+        dyn Fn(web_sys::WheelEvent) -> Option<Ms>,
+        handler.clone(),
+        "Handler can return only Msg, Option<Msg> or ()!",
+        Rc
+    );
+    let handler = move |event: web_sys::Event| {
+        handler(event.dyn_ref::<web_sys::WheelEvent>().unwrap().clone())
+    };
+    EventHandler::new(trigger, handler)
+}
+
+const ZOOM_FACTOR_IN: Number = 0.8;
+const ZOOM_FACTOR_OUT: Number = 1.2;
 
 impl PlotElement {
     pub fn new(graph: Graph) -> PlotElement {
@@ -21,22 +173,69 @@ impl PlotElement {
             canvas: ElRef::default(),
             screen: Area::new(0., 0., 400., 300.),
             area: Area::new(-100., -100., 100., 100.),
+            touch_state: TouchState::None,
         }
     }
 
-    pub fn process_touch(&mut self, _e: TouchMessage) -> bool {
-        false
+    fn process_touch_intern(&mut self, e: TouchEvent) -> bool {
+        let prev = &self.touch_state;
+        let curr = TouchState::new(e.target_touches());
+        let touch_effect = TouchEffect::new(prev, &curr);
+        self.touch_state = curr;
+        match touch_effect {
+            TouchEffect::Move(x, y) => {
+                self.move_by(-x, -y);
+                true
+            },
+            TouchEffect::Zoom(factor) => {
+                self.area.zoom_by(factor);
+                true
+            },
+            TouchEffect::None => false
+        }
+    }
+
+    pub fn process_touch(&mut self, e: TouchMessage) -> bool {
+        match e {
+            TouchMessage::TouchStart(e) => {
+                self.process_touch_intern(e)
+            },
+            TouchMessage::TouchEnd(e) => {
+                self.process_touch_intern(e)
+            },
+            TouchMessage::TouchCancel(e) => {
+                self.process_touch_intern(e)
+            },
+            TouchMessage::TouchMove(e) => {
+                self.process_touch_intern(e)
+            },
+        }
+    }
+
+    fn move_by(&mut self, x_delta: Number, y_delta: Number) {
+        let x_delta = -x_delta;
+        let x_delta = x_delta * self.area.x.get_distance() / self.screen.x.get_distance();
+        let y_delta = y_delta * self.area.y.get_distance() / self.screen.y.get_distance();
+        self.area.move_by(x_delta, y_delta);
     }
 
     pub fn process_mouse(&mut self, m: MouseMessage) -> bool {
         match m {
             MouseMessage::MouseMove(e) => {
                 if e.buttons() == 1 {
-                    let x_delta: Number = e.movement_x().into();
-                    let x_delta = -x_delta;
-                    let y_delta: Number = e.movement_y().into();
-                    seed::log!(format!("Move plot by ({}, {})", x_delta, y_delta));
-                    self.area.move_by(x_delta, y_delta);
+                    self.move_by(e.movement_x().into(), e.movement_y().into());
+                    true
+                } else {
+                    false
+                }
+            }
+            MouseMessage::Wheel(e) => {
+                let delta = e.delta_y();
+                if delta < 0. {
+                    self.area.zoom_by(ZOOM_FACTOR_IN);
+                    true
+                } else if delta > 0. {
+                    self.area.zoom_by(ZOOM_FACTOR_OUT);
                     true
                 } else {
                     false
@@ -80,6 +279,9 @@ impl PlotElement {
             mouse_ev(Ev::MouseMove, move |e| {
                 Some(Message::MouseMessage(idx, MouseMessage::MouseMove(e)))
             }),
+            wheel_ev(Ev::Wheel, move |e| {
+                Some(Message::MouseMessage(idx, MouseMessage::Wheel(e)))
+            })
         ]
     }
 
@@ -105,10 +307,12 @@ impl PlotElement {
             ctx.line_to(self.screen.x.max, y);
 
             for tic in x_axis.tics {
-                ctx.move_to(tic.pos, y);
-                ctx.line_to(tic.pos, y - 5.);
-                ctx.fill_text(&format!("{}", tic.label), tic.pos, y - 15.)
-                    .expect("drawing x axis label failed");
+                if tic.label != 0. {
+                    ctx.move_to(tic.pos, y);
+                    ctx.line_to(tic.pos, y - 5.);
+                    ctx.fill_text(&format!("{}", tic.label), tic.pos, y - 15.)
+                        .expect("drawing x axis label failed");
+                }
             }
         }
 
@@ -120,11 +324,13 @@ impl PlotElement {
             ctx.line_to(x, self.screen.y.max);
 
             for tic in y_axis.tics {
-                let pos = plot.screen.y.max - tic.pos;
-                ctx.move_to(x, pos);
-                ctx.line_to(x + 5., pos);
-                ctx.fill_text(&format!("{}", tic.label), x + 7., pos)
-                    .expect("drawing y axis label failed");
+                if tic.label != 0. {
+                    let pos = plot.screen.y.max - tic.pos;
+                    ctx.move_to(x, pos);
+                    ctx.line_to(x + 5., pos);
+                    ctx.fill_text(&format!("{}", tic.label), x + 7., pos)
+                        .expect("drawing y axis label failed");
+                }
             }
         }
         ctx.stroke();

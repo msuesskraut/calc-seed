@@ -4,24 +4,7 @@ use rust_expression::{Calculator, Error, Number, Value};
 use seed::prelude::*;
 use seed::*;
 
-use web_sys::{MouseEvent, TouchEvent};
-
-use plot::PlotElement;
-
-#[derive(Debug, Clone)]
-pub enum MouseMessage {
-    MouseDown(MouseEvent),
-    MouseUp(MouseEvent),
-    MouseMove(MouseEvent),
-}
-
-#[derive(Debug, Clone)]
-pub enum TouchMessage {
-    TouchStart(TouchEvent),
-    TouchEnd(TouchEvent),
-    TouchCancel(TouchEvent),
-    TouchMove(TouchEvent),
-}
+use plot::{MouseMessage, TouchMessage, PlotElement};
 
 #[derive(Debug)]
 enum CalcResult {

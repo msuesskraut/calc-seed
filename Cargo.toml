@@ -30,6 +30,11 @@ features = [
     "FileList",
     "FormData",
     "HtmlInputElement",
+    "MouseEvent",
+    "Touch",
+    "TouchEvent",
+    "TouchList",
+    "WheelEvent",
 ]
 
 [dev-dependencies]
