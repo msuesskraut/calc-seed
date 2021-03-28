@@ -1,10 +1,12 @@
 mod plot;
+mod seed_helpers;
+mod touch;
 
 use rust_expression::{Calculator, Error, Number, Value};
 use seed::prelude::*;
 use seed::*;
 
-use plot::{MouseMessage, PlotElement, TouchMessage};
+use plot::{PlotMessage, PlotElement};
 
 #[derive(Debug)]
 enum CalcResult {
@@ -49,8 +51,7 @@ pub enum Message {
     HistoryUp,
     HistoryDown,
     RenderPlot(usize),
-    MouseMessage(usize, MouseMessage),
-    TouchMessage(usize, TouchMessage),
+    PlotMessage(usize, PlotMessage),
 }
 
 const ENTER_KEY: &str = "Enter";
@@ -212,20 +213,10 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
                 }
             }
         }
-        Message::MouseMessage(idx, m) => {
+        Message::PlotMessage(idx, m) => {
             if let Some(cmd) = model.cmds.get_mut(idx) {
                 if let CalcResult::Plot(ref mut plot_element) = cmd.res {
-                    let must_render = plot_element.process_mouse(m);
-                    if must_render {
-                        orders.after_next_render(move |_| Message::RenderPlot(idx));
-                    }
-                }
-            }
-        }
-        Message::TouchMessage(idx, m) => {
-            if let Some(cmd) = model.cmds.get_mut(idx) {
-                if let CalcResult::Plot(ref mut plot_element) = cmd.res {
-                    let must_render = plot_element.process_touch(m);
+                    let must_render = plot_element.process(m);
                     if must_render {
                         orders.after_next_render(move |_| Message::RenderPlot(idx));
                     }
