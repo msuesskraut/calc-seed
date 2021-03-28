@@ -4,9 +4,9 @@ use seed::*;
 
 use web_sys::{HtmlCanvasElement, MouseEvent, TouchEvent, WheelEvent};
 
-use crate::Message;
 use crate::seed_helpers::wheel_ev;
-use crate::touch::{TouchState, TouchEffect};
+use crate::touch::{TouchEffect, TouchState};
+use crate::Message;
 
 #[derive(Debug, Clone)]
 pub enum PlotMessage {

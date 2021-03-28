@@ -1,5 +1,5 @@
-use web_sys::{Touch, TouchList};
 use rust_expression::Number;
+use web_sys::{Touch, TouchList};
 
 #[derive(Debug)]
 pub struct TouchPoint {

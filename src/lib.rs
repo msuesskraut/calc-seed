@@ -6,7 +6,7 @@ use rust_expression::{Calculator, Error, Number, Value};
 use seed::prelude::*;
 use seed::*;
 
-use plot::{PlotMessage, PlotElement};
+use plot::{PlotElement, PlotMessage};
 
 #[derive(Debug)]
 enum CalcResult {
