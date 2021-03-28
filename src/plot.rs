@@ -4,7 +4,7 @@ use rust_expression::{Area, Graph, Number};
 use seed::prelude::*;
 use seed::*;
 
-use web_sys::{HtmlCanvasElement, TouchList, MouseEvent, Touch, TouchEvent, WheelEvent};
+use web_sys::{HtmlCanvasElement, MouseEvent, Touch, TouchEvent, TouchList, WheelEvent};
 
 use crate::Message;
 
@@ -59,8 +59,8 @@ impl TouchState {
                 } else {
                     TouchState::Zoom(p2, p1)
                 }
-            },
-            _ => TouchState::None
+            }
+            _ => TouchState::None,
         }
     }
 
@@ -70,7 +70,7 @@ impl TouchState {
                 let x: Number = (tp1.x - tp2.x).into();
                 let y: Number = (tp1.y - tp2.y).into();
                 Some((x.powi(2) + y.powi(2)).sqrt())
-            },
+            }
             _ => None,
         }
     }
@@ -80,31 +80,30 @@ impl TouchState {
 enum TouchEffect {
     None,
     Move(Number, Number),
-    Zoom(Number)
+    Zoom(Number),
 }
 
 impl TouchEffect {
     fn new(previous: &TouchState, current: &TouchState) -> TouchEffect {
         match previous {
-            TouchState::Move(tp_previous) => {
-                match current {
-                    TouchState::Move(tp_current) if tp_previous.id == tp_current.id => {
-                        let x= tp_previous.x - tp_current.x;
-                        let y= tp_previous.y - tp_current.y;
-                        TouchEffect::Move(x.into(), y.into())
-                    },
-                    _ => TouchEffect::None
+            TouchState::Move(tp_previous) => match current {
+                TouchState::Move(tp_current) if tp_previous.id == tp_current.id => {
+                    let x = tp_previous.x - tp_current.x;
+                    let y = tp_previous.y - tp_current.y;
+                    TouchEffect::Move(x.into(), y.into())
                 }
+                _ => TouchEffect::None,
             },
-            TouchState::Zoom(tp1_previous, tp2_previous) => {
-                match current {
-                    TouchState::Zoom(tp1_current, tp2_current) if (tp1_previous.id == tp1_current.id) && (tp2_previous.id == tp2_current.id) => {
-                        let prev_dist = previous.get_distance().unwrap();
-                        let curr_dist = current.get_distance().unwrap();
-                        TouchEffect::Zoom(prev_dist / curr_dist)
-                    },
-                    _ => TouchEffect::None
+            TouchState::Zoom(tp1_previous, tp2_previous) => match current {
+                TouchState::Zoom(tp1_current, tp2_current)
+                    if (tp1_previous.id == tp1_current.id)
+                        && (tp2_previous.id == tp2_current.id) =>
+                {
+                    let prev_dist = previous.get_distance().unwrap();
+                    let curr_dist = current.get_distance().unwrap();
+                    TouchEffect::Zoom(prev_dist / curr_dist)
                 }
+                _ => TouchEffect::None,
             },
             TouchState::None => TouchEffect::None,
         }
@@ -186,29 +185,21 @@ impl PlotElement {
             TouchEffect::Move(x, y) => {
                 self.move_by(-x, -y);
                 true
-            },
+            }
             TouchEffect::Zoom(factor) => {
                 self.area.zoom_by(factor);
                 true
-            },
-            TouchEffect::None => false
+            }
+            TouchEffect::None => false,
         }
     }
 
     pub fn process_touch(&mut self, e: TouchMessage) -> bool {
         match e {
-            TouchMessage::TouchStart(e) => {
-                self.process_touch_intern(e)
-            },
-            TouchMessage::TouchEnd(e) => {
-                self.process_touch_intern(e)
-            },
-            TouchMessage::TouchCancel(e) => {
-                self.process_touch_intern(e)
-            },
-            TouchMessage::TouchMove(e) => {
-                self.process_touch_intern(e)
-            },
+            TouchMessage::TouchStart(e) => self.process_touch_intern(e),
+            TouchMessage::TouchEnd(e) => self.process_touch_intern(e),
+            TouchMessage::TouchCancel(e) => self.process_touch_intern(e),
+            TouchMessage::TouchMove(e) => self.process_touch_intern(e),
         }
     }
 

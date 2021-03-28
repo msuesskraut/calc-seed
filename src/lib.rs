@@ -4,7 +4,7 @@ use rust_expression::{Calculator, Error, Number, Value};
 use seed::prelude::*;
 use seed::*;
 
-use plot::{MouseMessage, TouchMessage, PlotElement};
+use plot::{MouseMessage, PlotElement, TouchMessage};
 
 #[derive(Debug)]
 enum CalcResult {
