@@ -4,7 +4,6 @@ use seed::*;
 
 use web_sys::{HtmlCanvasElement, MouseEvent, TouchEvent, WheelEvent};
 
-use crate::seed_helpers::wheel_ev;
 use crate::touch::{TouchEffect, TouchState};
 use crate::Message;
 
