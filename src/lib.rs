@@ -1,5 +1,4 @@
 mod plot;
-mod seed_helpers;
 mod touch;
 
 use rust_expression::{Calculator, Error, Number, Value};
@@ -230,7 +229,11 @@ fn init(_url: Url, _orders: &mut impl Orders<Message>) -> Model {
     Model::default()
 }
 
-#[wasm_bindgen]
-pub fn render() {
-    seed::App::start("app", init, update, view);
+// ------ ------
+//     Start
+// ------ ------
+
+#[wasm_bindgen(start)]
+pub fn start() {
+    App::start("app", init, update, view);
 }
