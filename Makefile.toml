@@ -1,3 +1,16 @@
+[config]
+default_to_workspace = false
+min_version = "0.32.1"
+
+[config.modify_core_tasks]
+private = true
+namespace = "default"
+
+[env]
+# Reset rustup recursion limit because otherwise `cargo make clippy_all` fails.
+# https://github.com/rust-lang/rustup.rs/blob/d35f94183601a81489bce025c2abc35cd395c909/src/toolchain.rs#L296
+RUST_RECURSION_COUNT = "0"
+
 [tasks.build]
 description = "Build complete calc into dist"
 dependencies = [
@@ -6,11 +19,22 @@ dependencies = [
     "build_assets"
 ]
 
+[tasks.clippy]
+description = "Lint with Clippy"
+command = "cargo"
+args = ["clippy", "--all-features", "--", 
+    "--deny", "warnings", 
+    "--deny", "clippy::pedantic", 
+    "--deny", "clippy::nursery",
+]
+dependencies = ["default::install-clippy"]
+
 [tasks.build_wasm]
 description = "Build with wasm-pack"
 install_crate = "wasm-pack"
 command = "wasm-pack"
-args = ["build", "--target", "no-modules", "--out-name", "calc_seed", "--out-dir", "./dist", "--release"]
+args = ["build", "--target", "web", "--out-name", "calc_seed", "--out-dir", "./dist", "--release"]
+dependencies = ["default::install-wasm-pack"]
 
 [tasks.build_css]
 description = "Build css from sass template"
@@ -18,29 +42,62 @@ install_crate = { crate_name = "rsass", binary = "rsass", features = ["commandli
 script = [ "rsass ./assets/main.scss >./dist/main.css" ]
 
 [tasks.build_assets]
-windows_alias = "build_assests_windows"
+#windows_alias = "build_assests_windows"
 description = "Copy assets into dist dir"
 script = [
-    '''
-    cp assets/index.html ./dist
-    cp assets/favicon.png ./dist
-    cp -r assets/extra/* ./dist
-    '''
-]
+'''
+#!@duckscript
+cp ./assets/index.html ./dist/index.html
+cp ./assets/favicon.png ./dist/favicon.png
 
-[tasks.build_assests_windows]
-description = "Copy assets into dist dir"
-script = [
-    '''
-    copy assets\index.html .\dist
-    copy assets\favicon.png .\dist
-    xcopy assets\extra .\dist /E /Y
-    '''
+extras = glob_array ./assets/extra/*
+for path in ${extras}
+    file = basename ${path}
+    cp ${path} ./dist/${file}
+end
+'''
 ]
 
 [tasks.serve]
-description = "Start server for given example"
-install_crate = { crate_name = "https", binary = "http", test_arg = "--help" }
-workspace = false
-command = "http"
-args = ["./dist"]
+description = "Build and start microserver"
+install_crate = { crate_name = "microserver", binary = "microserver", test_arg = "-h" }
+dependencies = ["build"]
+command = "microserver"
+cwd = "."
+args = ["--port", "8000", "./dist"]
+
+[tasks.test]
+description = "Run tests. Ex: 'cargo make test firefox'. Test envs: [chrome, firefox, safari]"
+command = "wasm-pack"
+args = ["test", "--${@}"]
+dependencies = ["default::install-wasm-pack"]
+
+[tasks.test_h]
+description = "Run headless tests. Ex: 'cargo make test_h firefox'. Test envs: [chrome, firefox, safari]"
+extend = "test"
+args = ["test", "--headless", "--${@}"]
+
+[tasks.test_h_firefox]
+description = "Run headless tests with Firefox."
+extend = "test"
+args = ["test", "--headless", "--firefox"]
+
+[tasks.test_h_release]
+extend = "test_h"
+description = "Run headless tests in release mode. Ex: 'cargo make test_h firefox'. Test envs: [chrome, firefox, safari]"
+args = ["test", "--headless", "--${@}", "--release"]
+
+[tasks.fmt]
+description = "Format with rustfmt"
+command = "cargo"
+args = ["fmt", "--all"]
+dependencies = [ "default::install-rustfmt" ]
+
+[tasks.publish_dry_run]
+description = "Check the crate can be published"
+command = "cargo"
+args = ["publish", "--dry-run", "--allow-dirty"]
+
+[tasks.verify]
+description = "Format, lint with Clippy, build, run tests, simulate publish"
+dependencies = ["fmt", "clippy", "test_h_firefox", "publish_dry_run"]
