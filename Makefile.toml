@@ -80,7 +80,7 @@ args = ["test", "--headless", "--${@}"]
 [tasks.test_h_firefox]
 description = "Run headless tests with Firefox."
 extend = "test"
-args = ["test", "--headless", "--firefox"]
+args = ["test", "--headless", "--firefox", "--release"]
 
 [tasks.test_h_release]
 extend = "test_h"
@@ -100,4 +100,4 @@ args = ["publish", "--dry-run", "--allow-dirty"]
 
 [tasks.verify]
 description = "Format, lint with Clippy, build, run tests, simulate publish"
-dependencies = ["fmt", "clippy", "test_h_firefox", "publish_dry_run"]
+dependencies = ["fmt", "clippy", "test_h_firefox"]
