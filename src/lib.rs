@@ -1,3 +1,4 @@
+mod help;
 mod plot;
 mod touch;
 
@@ -151,15 +152,28 @@ fn view(model: &Model) -> Node<Message> {
                     "Execute",
                     ev(Ev::Click, |_| Message::ExecuteCommand)
                 ]
-            ]
+            ],
         ]
     ]);
 
     div![
         C!("container"),
-        div![C!("row"), div![C!("col-12"), h1!("Calculator")],],
+        div![C!("row"), 
+            div![
+                C!("col-11"),
+                h1!("Calculator"),
+            ],
+            div![
+                C!("col-1"),
+                div![
+                    C!["align-bottom"],
+                    crate::help::view_help_button(),
+                ],
+            ],
+        ],
         commands,
-        view_footer()
+        view_footer(),
+        crate::help::view_help(),
     ]
 }
 

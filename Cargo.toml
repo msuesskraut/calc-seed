@@ -16,8 +16,8 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 
-rust-expression = "0.3.0"
-seed =  { git = "https://github.com/seed-rs/seed", branch = "master" } #"0.8.0"
+rust-expression = { path = "../rust-expression" } # "0.3.0"
+seed = { git = "https://github.com/seed-rs/seed", branch = "master", features = [ "markdown" ] } #"0.8.0"
 wasm-bindgen = "0.2.72"
 
 [dependencies.web-sys]
