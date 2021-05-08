@@ -158,17 +158,12 @@ fn view(model: &Model) -> Node<Message> {
 
     div![
         C!("container"),
-        div![C!("row"), 
-            div![
-                C!("col-11"),
-                h1!("Calculator"),
-            ],
+        div![
+            C!("row"),
+            div![C!("col-11"), h1!("Calculator"),],
             div![
                 C!("col-1"),
-                div![
-                    C!["align-bottom"],
-                    crate::help::view_help_button(),
-                ],
+                div![C!["align-bottom"], crate::help::view_help_button(),],
             ],
         ],
         commands,
