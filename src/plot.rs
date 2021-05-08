@@ -1,6 +1,6 @@
 use rust_expression::{Area, Graph, Number};
 use seed::prelude::*;
-use seed::*;
+use seed::{attrs, canvas, style};
 
 use web_sys::{HtmlCanvasElement, MouseEvent, TouchEvent, WheelEvent};
 
@@ -27,13 +27,13 @@ const ZOOM_FACTOR_IN: Number = 0.8;
 const ZOOM_FACTOR_OUT: Number = 1.2;
 
 impl PlotElement {
-    pub fn new(graph: Graph) -> PlotElement {
-        PlotElement {
+    pub fn new(graph: Graph) -> Self {
+        Self {
             graph,
             canvas: ElRef::default(),
             screen: Area::new(0., 0., 400., 300.),
             area: Area::new(-100., -100., 100., 100.),
-            touch_state: TouchState::None,
+            touch_state: TouchState::Empty,
         }
     }
 
@@ -44,25 +44,26 @@ impl PlotElement {
         self.area.move_by(x_delta, y_delta);
     }
 
-    fn process_touch(&mut self, e: TouchEvent) -> bool {
+    fn process_touch(&mut self, e: &TouchEvent) -> bool {
+        use TouchEffect::*;
         let prev = &self.touch_state;
-        let curr = TouchState::new(e.target_touches());
+        let curr = TouchState::new(&e.target_touches());
         let touch_effect = TouchEffect::new(prev, &curr);
         self.touch_state = curr;
         match touch_effect {
-            TouchEffect::Move(x, y) => {
+            Move(x, y) => {
                 self.move_by(-x, -y);
                 true
             }
-            TouchEffect::Zoom(factor) => {
+            Zoom(factor) => {
                 self.area.zoom_by(factor);
                 true
             }
-            TouchEffect::None => false,
+            Empty => false,
         }
     }
 
-    fn process_mouse(&mut self, e: MouseEvent) -> bool {
+    fn process_mouse(&mut self, e: &MouseEvent) -> bool {
         if e.buttons() == 1 {
             self.move_by(e.movement_x().into(), e.movement_y().into());
             true
@@ -71,7 +72,7 @@ impl PlotElement {
         }
     }
 
-    fn process_wheel(&mut self, e: WheelEvent) -> bool {
+    fn process_wheel(&mut self, e: &WheelEvent) -> bool {
         let delta = e.delta_y();
         if delta < 0. {
             self.area.zoom_by(ZOOM_FACTOR_IN);
@@ -86,9 +87,9 @@ impl PlotElement {
 
     pub fn process(&mut self, m: PlotMessage) -> bool {
         match m {
-            PlotMessage::MouseMove(e) => self.process_mouse(e),
-            PlotMessage::Touch(e) => self.process_touch(e),
-            PlotMessage::Wheel(e) => self.process_wheel(e),
+            PlotMessage::MouseMove(e) => self.process_mouse(&e),
+            PlotMessage::Touch(e) => self.process_touch(&e),
+            PlotMessage::Wheel(e) => self.process_wheel(&e),
         }
     }
 
@@ -188,10 +189,12 @@ impl PlotElement {
             match y {
                 Some(y) => {
                     let y = plot.screen.y.max - y;
+                    #[allow(clippy::cast_precision_loss)]
+                    let x: f64 = x as f64;
                     if close_stroke {
-                        ctx.line_to(x as f64, y);
+                        ctx.line_to(x, y);
                     } else {
-                        ctx.move_to(x as f64, y);
+                        ctx.move_to(x, y);
                     }
                     close_stroke = true;
                 }

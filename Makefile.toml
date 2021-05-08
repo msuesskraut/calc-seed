@@ -26,6 +26,9 @@ args = ["clippy", "--all-features", "--",
     "--deny", "warnings", 
     "--deny", "clippy::pedantic", 
     "--deny", "clippy::nursery",
+    "--allow", "clippy::pub-enum-variant-names",
+    "--allow", "clippy::module-name-repetitions",
+    "--allow", "clippy::enum-glob-use",
 ]
 dependencies = ["default::install-clippy"]
 

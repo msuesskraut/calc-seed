@@ -4,7 +4,7 @@ mod touch;
 
 use rust_expression::{Calculator, Error, Number, Value};
 use seed::prelude::*;
-use seed::*;
+use seed::{C, a, attrs, button, div, h1, input, span};
 
 use plot::{PlotElement, PlotMessage};
 
@@ -18,13 +18,14 @@ enum CalcResult {
 }
 
 impl From<Result<Value, Error>> for CalcResult {
-    fn from(res: Result<Value, Error>) -> CalcResult {
+    fn from(res: Result<Value, Error>) -> Self {
+        use CalcResult::*;
         match res {
-            Ok(Value::Void) => CalcResult::Void,
-            Ok(Value::Number(num)) => CalcResult::Number(num),
-            Ok(Value::Solved { variable, value }) => CalcResult::Solved { variable, value },
-            Ok(Value::Graph(graph)) => CalcResult::Plot(Box::new(PlotElement::new(graph))),
-            Err(err) => CalcResult::Error(err),
+            Ok(Value::Void) => Void,
+            Ok(Value::Number(num)) => Number(num),
+            Ok(Value::Solved { variable, value }) => Solved { variable, value },
+            Ok(Value::Graph(graph)) => Plot(Box::new(PlotElement::new(graph))),
+            Err(err) => Error(err),
         }
     }
 }
@@ -97,7 +98,7 @@ fn view(model: &Model) -> Node<Message> {
         .cmds
         .iter()
         .enumerate()
-        .map(|(idx, cmd)| {
+        .flat_map(|(idx, cmd)| {
             let res = match &cmd.res {
                 CalcResult::Void => seed::empty(),
                 CalcResult::Number(num) => div![C!("success"), "=> ", num.to_string()],
@@ -115,7 +116,6 @@ fn view(model: &Model) -> Node<Message> {
                 div![C!("row"), div![C!("col-12"), res]],
             ]
         })
-        .flatten()
         .collect();
     commands.push(div![
         C!("row"),
@@ -192,11 +192,9 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
             }
         }
         Message::HistoryDown => {
-            let mut history_entry = model.history;
-            if history_entry < model.cmds.len() {
-                history_entry += 1;
+            if model.history < model.cmds.len() {
+                model.history += 1;
             }
-            model.history = history_entry;
             if model.history < model.cmds.len() {
                 model.current_command = model.cmds[model.history].cmd.clone();
             } else {
@@ -204,11 +202,7 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
             }
         }
         Message::HistoryUp => {
-            let mut history_entry = model.history;
-            if history_entry > 0 {
-                history_entry -= 1;
-            }
-            model.history = history_entry;
+            model.history = model.history.saturating_sub(1);
             if model.history < model.cmds.len() {
                 model.current_command = model.cmds[model.history].cmd.clone();
             }
@@ -234,6 +228,7 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
     }
 }
 
+#[allow(clippy::needless_pass_by_value)] // siganture defined by seed
 fn init(_url: Url, _orders: &mut impl Orders<Message>) -> Model {
     Model::default()
 }

@@ -9,44 +9,46 @@ pub struct TouchPoint {
 }
 
 impl TouchPoint {
-    fn new(touch: &Touch) -> TouchPoint {
+    fn new(touch: &Touch) -> Self {
         let id = touch.identifier();
         let x = touch.client_x();
         let y = touch.client_y();
-        TouchPoint { id, x, y }
+        Self { id, x, y }
     }
 }
 
 #[derive(Debug)]
 pub enum TouchState {
-    None,
+    Empty,
     Move(TouchPoint),
     Zoom(TouchPoint, TouchPoint),
 }
 
 impl TouchState {
-    pub fn new(tl: TouchList) -> TouchState {
+    pub fn new(tl: &TouchList) -> Self {
+        use TouchState::*;
+
         match tl.length() {
-            1 => TouchState::Move(TouchPoint::new(&tl.item(0).unwrap())),
+            1 => Move(TouchPoint::new(&tl.item(0).unwrap())),
             2 => {
                 let p1 = TouchPoint::new(&tl.item(0).unwrap());
                 let p2 = TouchPoint::new(&tl.item(1).unwrap());
                 if p1.id < p2.id {
-                    TouchState::Zoom(p1, p2)
+                    Zoom(p1, p2)
                 } else {
-                    TouchState::Zoom(p2, p1)
+                    Zoom(p2, p1)
                 }
             }
-            _ => TouchState::None,
+            _ => Empty,
         }
     }
 
     fn get_distance(&self) -> Option<Number> {
         match self {
-            TouchState::Zoom(tp1, tp2) => {
+            Self::Zoom(tp1, tp2) => {
                 let x: Number = (tp1.x - tp2.x).into();
                 let y: Number = (tp1.y - tp2.y).into();
-                Some((x.powi(2) + y.powi(2)).sqrt())
+                Some(x.hypot(y))
             }
             _ => None,
         }
@@ -55,21 +57,23 @@ impl TouchState {
 
 #[derive(Debug)]
 pub enum TouchEffect {
-    None,
+    Empty,
     Move(Number, Number),
     Zoom(Number),
 }
 
 impl TouchEffect {
-    pub fn new(previous: &TouchState, current: &TouchState) -> TouchEffect {
+    pub fn new(previous: &TouchState, current: &TouchState) -> Self {
+        use TouchEffect::*;
+
         match previous {
             TouchState::Move(tp_previous) => match current {
                 TouchState::Move(tp_current) if tp_previous.id == tp_current.id => {
                     let x = tp_previous.x - tp_current.x;
                     let y = tp_previous.y - tp_current.y;
-                    TouchEffect::Move(x.into(), y.into())
+                    Move(x.into(), y.into())
                 }
-                _ => TouchEffect::None,
+                _ => Empty,
             },
             TouchState::Zoom(tp1_previous, tp2_previous) => match current {
                 TouchState::Zoom(tp1_current, tp2_current)
@@ -78,11 +82,11 @@ impl TouchEffect {
                 {
                     let prev_dist = previous.get_distance().unwrap();
                     let curr_dist = current.get_distance().unwrap();
-                    TouchEffect::Zoom(prev_dist / curr_dist)
+                    Zoom(prev_dist / curr_dist)
                 }
-                _ => TouchEffect::None,
+                _ => Empty,
             },
-            TouchState::None => TouchEffect::None,
+            TouchState::Empty => Empty,
         }
     }
 }

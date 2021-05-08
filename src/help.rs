@@ -1,6 +1,7 @@
 use crate::Message;
 
 use seed::prelude::*;
+#[allow(clippy::wildcard_imports)]
 use seed::*;
 
 pub fn view_help_button() -> Node<Message> {
