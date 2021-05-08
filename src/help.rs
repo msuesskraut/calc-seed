@@ -16,27 +16,6 @@ pub fn view_help_button() -> Node<Message> {
 }
 
 pub fn view_help() -> Node<Message> {
-    /*
-    div![
-        C!["alert alert-info"],
-        attrs! {
-            "role" => "alert",
-        },
-        h4![
-            C!["alert-heading"],
-            "Well done!",
-        ],
-        p![
-            "Aww yeah, you successfully read this important alert message.
-            This example text is going to run a bit longer so that you can see how spacing within an alert works with this kind of content.",
-        ],
-        hr![],
-        p![
-            C!["mb-0"],
-            "Whenever you need to, be sure to use margin utilities to keep things nice and tidy.",
-        ],
-    ]
-    */
     /* Model dialog */
     div![
         C!["modal fade help"],
@@ -97,25 +76,3 @@ pub fn view_help() -> Node<Message> {
         ]
     ]
 }
-
-/*
-
-<!-- Modal -->
-  <div class="modal-dialog model-xl modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="helpTitle">Modal title</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        ...
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary">Save changes</button>
-      </div>
-    </div>
-  </div>
-  */
