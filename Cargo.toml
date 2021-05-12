@@ -18,10 +18,10 @@ crate-type = ["cdylib", "rlib"]
 
 rust-expression = { path = "../rust-expression" } # "0.3.0"
 seed = { git = "https://github.com/seed-rs/seed", branch = "master", features = [ "markdown" ] } #"0.8.0"
-wasm-bindgen = "0.2.72"
+wasm-bindgen = "0.2.74"
 
 [dependencies.web-sys]
-version = "^0.3.49"
+version = "^0.3.50"
 features = [
     "Blob",
     "Event",
@@ -38,4 +38,4 @@ features = [
 ]
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.22"
+wasm-bindgen-test = "0.3.23"
