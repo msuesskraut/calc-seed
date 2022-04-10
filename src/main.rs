@@ -237,7 +237,6 @@ fn init(_url: Url, _orders: &mut impl Orders<Message>) -> Model {
 //     Start
 // ------ ------
 
-#[wasm_bindgen(start)]
-pub fn start() {
+fn main() {
     App::start("app", init, update, view);
 }

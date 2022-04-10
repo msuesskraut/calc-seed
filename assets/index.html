@@ -2,23 +2,26 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-    <meta name="description" content="Calculator">
-
-    <link rel="icon" type="image/png" href="./favicon.png">
-
-    <!-- Bootstrap 4.5.3 -->
-    <link rel="stylesheet" href="bootstrap.min.css">
-
-    <link rel="stylesheet" type="text/css" href="./main.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="Calculator" />
 
     <title>Calculator</title>
 
+    <link data-trunk rel="icon" type="image/png" href="./favicon.png" />
+
+    <!-- Bootstrap 5.0.2 -->
+    <link data-trunk rel="css" href="./extra/bootstrap.min.css" />
+    <link data-trunk rel="copy-file" href="./extra/jquery-3.6.0.slim.min.js" />
+    <link data-trunk rel="copy-file" href="./extra/bootstrap.bundle.min.js" />
+
+    <link data-trunk rel="scss" href="./main.scss" />
+    <base data-trunk-public-url /calc>
+
+    <link data-trunk rel="rust" href=".." data-wasm-opt="4" data-keep-debug="0" />
 </head>
 <body>
 
-<!-- Bootstrap 4.5.3 -->
+<!-- Bootstrap 5.0.2 -->
 <script src="jquery-3.6.0.slim.min.js"></script>
 <script src="bootstrap.bundle.min.js"></script>
 
