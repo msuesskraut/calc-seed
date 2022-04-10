@@ -7,6 +7,7 @@ use seed::prelude::*;
 use seed::{C, a, attrs, button, div, h1, input, span};
 
 use plot::{PlotElement, PlotMessage};
+use web_sys::HtmlElement;
 
 #[derive(Debug)]
 enum CalcResult {
@@ -93,6 +94,8 @@ fn view_footer() -> Node<Message> {
     ]
 }
 
+static COMMANDLINE_ID : &str = "commandline";
+
 fn view(model: &Model) -> Node<Message> {
     let mut commands: Vec<Node<Message>> = model
         .cmds
@@ -127,11 +130,12 @@ fn view(model: &Model) -> Node<Message> {
                     At::Type => "text",
                     At::Name => "command",
                     At::Placeholder => "command",
-                    At::AutoFocus => true.as_at_value(),
+                    At::AutoFocus => AtValue::None,
                     At::Value => model.current_command,
                     "aria-label" => "Command",
                     "aria-describedby" => "basic-addon2",
                     "autocapitalize" => "off",
+                    At::Id => COMMANDLINE_ID,
                 ],
                 input_ev(Ev::Input, Message::CommandUpdate),
                 keyboard_ev(Ev::KeyDown, |keyboard_event| {
@@ -147,7 +151,7 @@ fn view(model: &Model) -> Node<Message> {
             div![
                 C!("input-group-append"),
                 button![
-                    C!("btn btn-outline-secondary"),
+                    C!("btn btn-outline-secondary p-x-3"),
                     attrs!(At::Type => "button"),
                     "Execute",
                     ev(Ev::Click, |_| Message::ExecuteCommand)
@@ -159,7 +163,7 @@ fn view(model: &Model) -> Node<Message> {
     div![
         C!("container"),
         div![
-            C!("row"),
+            C!("row p-3"),
             div![C!("col-11"), h1!("Calculator"),],
             div![
                 C!("col-1"),
@@ -183,6 +187,9 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
                     let next_idx = model.cmds.len();
                     orders.after_next_render(move |_| Message::RenderPlot(next_idx));
                 }
+                orders.after_next_render(move |_| {
+                    seed::browser::util::html_document().get_element_by_id(COMMANDLINE_ID).unwrap().dyn_into::<HtmlElement>().unwrap().focus().unwrap();
+                });
                 model.cmds.push(CalcCommand {
                     cmd: model.current_command.clone(),
                     res: res.into(),
