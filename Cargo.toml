@@ -1,8 +1,8 @@
 [package]
 name = "calc-seed"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Martin Suesskraut <22873554+msuesskraut@users.noreply.github.com>"]
-edition = "2018"
+edition = "2021"
 readme = "README.md"
 license = "MIT"
 description = "Simple calculator and linear solver as a webapp using wasm and seed"
@@ -16,12 +16,12 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 
-rust-expression = { path = "../rust-expression" } # "0.3.0"
-seed = { git = "https://github.com/seed-rs/seed", branch = "master", features = [ "markdown" ] } #"0.8.0"
-wasm-bindgen = "0.2.74"
+rust-expression = "0.3.1" # { path = "../rust-expression" } # "0.3.0"
+seed = { version = "0.9.1", features = [ "markdown" ] }
+wasm-bindgen = "0.2.80"
 
 [dependencies.web-sys]
-version = "^0.3.50"
+version = "^0.3.57"
 features = [
     "Blob",
     "Event",
@@ -38,4 +38,4 @@ features = [
 ]
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.23"
+wasm-bindgen-test = "0.3.30"
