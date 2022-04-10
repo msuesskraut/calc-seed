@@ -4,7 +4,7 @@ mod touch;
 
 use rust_expression::{Calculator, Error, Number, Value};
 use seed::prelude::*;
-use seed::{C, a, attrs, button, div, h1, input, span};
+use seed::{a, attrs, button, div, h1, input, span, C};
 
 use plot::{PlotElement, PlotMessage};
 use web_sys::HtmlElement;
@@ -94,7 +94,7 @@ fn view_footer() -> Node<Message> {
     ]
 }
 
-static COMMANDLINE_ID : &str = "commandline";
+static COMMANDLINE_ID: &str = "commandline";
 
 fn view(model: &Model) -> Node<Message> {
     let mut commands: Vec<Node<Message>> = model
@@ -188,7 +188,13 @@ fn update(message: Message, model: &mut Model, orders: &mut impl Orders<Message>
                     orders.after_next_render(move |_| Message::RenderPlot(next_idx));
                 }
                 orders.after_next_render(move |_| {
-                    seed::browser::util::html_document().get_element_by_id(COMMANDLINE_ID).unwrap().dyn_into::<HtmlElement>().unwrap().focus().unwrap();
+                    seed::browser::util::html_document()
+                        .get_element_by_id(COMMANDLINE_ID)
+                        .unwrap()
+                        .dyn_into::<HtmlElement>()
+                        .unwrap()
+                        .focus()
+                        .unwrap();
                 });
                 model.cmds.push(CalcCommand {
                     cmd: model.current_command.clone(),
